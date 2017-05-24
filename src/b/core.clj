@@ -1,4 +1,5 @@
 (ns b.core
+  (:gen-class)
   (:require [b.p2p :as p2p]
             [b.block :as block]
             [b.chain :as chain]
