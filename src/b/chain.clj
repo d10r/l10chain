@@ -62,7 +62,7 @@
   (let [reward-txs (map #(let [{receiver :forger} %] (t/->Transaction receiver 1)) ch)
         other-txs (mapcat #(let [{txs :transactions} %] txs) ch)
         all-txs (concat reward-txs other-txs)]
-   (remove empty? all-txs)))
+    (into [] (remove empty? all-txs))))
 
 (defn balance [ch addr]
   "Calculates the balance of an account by traversing the txlog and subtracting sent from received amount."
@@ -161,13 +161,11 @@
 ;    (filter #(<= (get-in % [:header :height]) mrcaheight) chain1))) ; doesn't matter which chain we pick here
 
 (defn total-supply [ch]
-  (-
-    (->> (txlog ch)
-         (map #(let [{v :value} %] v))
-         (reduce +))
-    (->> (txlog ch)
-         (map #(let [{v :value} %] v))
-         (reduce +))))
+  "Calculates the total supply from block rewards (transactions with empty sender."
+  (->> (txlog ch)
+       (filter #(= (:sender %) nil))
+       (map #(let [{v :value} %] v))
+       (reduce +)))
 
 
 (defn allowed-transaction? [ch tx]
@@ -178,7 +176,6 @@
           (>= sbal (:value tx)))
       true
       false)))
-
 
 (defn transactions-valid? [ch txns]
   "Checks if the given transactions are valid in the context of the given chain.
@@ -231,21 +228,22 @@
             txns (b/transactions bl)]
         ; TODO: also check if forger is allowed to forge
         (if (not (and (b/valid? bl pbl (max-height ch))
-                      (transactions-valid? (pop ch) bl)))
+                      (transactions-valid? (pop ch) txns)))
           (do
             (log/debug "Block " (b/short-block-hash bl) " at height " (b/height bl) " is invalid!")
             false)
           (recur (pop ch)))))))
 
-(defn append-block [ch bl]
-  "Appends the block if valid."
-  (conj ch bl))
-
-(defn append-or-replace-block [ch bl]
-  "Tries to append the block to the chain. If it fails, tries to replace the last one. Else returns nil."
+(defn append-or-replace-last [ch bl]
+  "Appends the given block to the chain or replaces the last block (based on height).
+  Returns the new chain or nil if it fails.
+"
   (let [chain-h (height ch)
         block-h (b/height bl)
         diff-h (- block-h chain-h)]
-    (cond
-      (= 1 diff-h) (conj ch bl)
-      (= 2 diff-h) (conj (pop ch) bl))))
+    (let [nch (cond
+                (= 1 diff-h) (conj ch bl)
+                (= 0 diff-h) (conj (pop ch) bl))]
+      (if (valid? nch)
+          nch
+          nil))))

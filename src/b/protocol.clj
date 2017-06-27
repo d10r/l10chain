@@ -6,7 +6,7 @@
   (:require [clojure.tools.logging :as log])
   (:import (org.apache.log4j Logger Level)))
 
-(.setLevel (Logger/getLogger (str *ns*)) Level/DEBUG)
+(.setLevel (Logger/getLogger (str *ns*)) Level/INFO)
 
 ; set by core on init
 (def chref)
@@ -88,10 +88,9 @@
           (do
             (log/debug "We have nothing. Requesting sync...")
             (request :getblocks {:starth 0} peer))))
-      (let [newch (c/append-or-replace-block ch bl)]
+      (let [newch (c/append-or-replace-last ch bl)]
         (if newch
-          (if (and (c/valid? newch)
-                   (c/better? newch ch))
+          (if (c/better? newch ch)
             (do
               (log/debug "adding block " sbh " to chain")
               (update-chain newch))
@@ -100,15 +99,6 @@
           (do
             (log/debug "couldn't insert block " sbh ", requesting more")
             (request :getblocks {:starth (max 0 (- (c/max-height ch) 10))} peer)))))))
-
-(defmethod onreceive :blocksNEW [_ blocks peer])
-  ; find height of common root (mrca)
-  ; add block[i]..block[top]
-;  (filter #(> (:height (:header %)) 2) @b)
-  ; check if new chain valid
-  ; check if new chain better
-  ; update!
-
 
 (defmethod onreceive :blocks [_ blocks peer]
   "Checks if received blocks can improve the local chain.
@@ -140,6 +130,7 @@
 
 (defmethod onreceive :transaction [_ transaction peer]
   "Handles a received transaction."
+  (log/debug "received transaction")
   (let [tx (tx/map->Transaction transaction)]
     (if (tx/valid? tx)
       (do

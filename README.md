@@ -88,9 +88,20 @@ At least one node with listening socket needs to be running (bootstrapping node)
 Accounts are created with a shell script. Requires openssl installed.
 Example: `./generate_ec_keypair.sh data`
 
-Currently, the only way to control a node is via the REPL. Thus the application needs to be started with `lein repl`.
+4 accounts are already pre-generated in directories named node[0-3].
 
-once it's running is via Clojure REPL.
+Start an instance with the account from directory node0 which generates a genesis block, listens for p2p node connections on the default port and starts a forger process.
+`lein run -g -s -f`
+
+Start an instance with the account from directory node1 which connects to the instance above and just passively builds its chain from what it receives.
+`lein run -d node1 --peers localhost`
+
+Start an instance with the account from directory node2 which connects to the instance above and also starts forging.
+`lein run -d node2 --peers localhost -f`
+
+Since there's no RPC interface yet, the way to interact with a running node is via the REPL.
+`lein repl`
+Note that this doesn't automatically execute the main function. 
 
 ### Missing
 

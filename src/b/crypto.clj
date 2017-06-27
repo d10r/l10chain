@@ -51,9 +51,13 @@
 
 (defn verifysig [sig data pubkey-hex]
   "Checks if the given hex signature is valid for data."
-   (log/debug "sig " sig " data " data " hpk " pubkey-hex)
-   (let [pubkey (decodepubkey pubkey-hex)]
-     (dsa/verify data (hex->bytes sig) {:key pubkey :alg :ecdsa+sha256})))
+  (log/debug "sig " sig " data " data " hpk " pubkey-hex)
+  (try
+    (let [pubkey (decodepubkey pubkey-hex)]
+      (dsa/verify data (hex->bytes sig) {:key pubkey :alg :ecdsa+sha256}))
+    (catch java.security.SignatureException e
+      (log/debug "signature check threw exception: " (.toString e))
+      false)))
 
 (defn distance [forger signature]
   "Distance between a given forger and the ideal forger for the next block based on previous block signature.
@@ -68,6 +72,3 @@
   "The max possible distance between a forger and the ideal forger."
   ; since distance is mapped to a 64 bit int, half of it is the max distance
   (Math/pow 2 64))
-
-
-;(loadkeys)

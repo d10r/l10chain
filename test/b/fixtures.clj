@@ -1,19 +1,37 @@
-(ns b.fixtures)
+(ns b.fixtures
+  (:require [b.block :as block]))
 
-; a valid chain with 6 blocks (5-0). Created with (pr-str @b)
-(def ch_0_5 (read-string "()"))
+; Input string created with (pr-str @blockchain)
+(def tc (read-string "(#b.block.Block{:forger \"3059301306072a8648ce3d020106082a8648ce3d03010703420004a0141000ec4c9dd583c0fb8f406f98c19c226978b0f1d97124cf9a4550b38d802d72baca3c1dd4e46ca920f81ae5d0c2180b20010db15d68bd9f1a3904840489\", :signature \"3046022100a05151aa99d9a27aafb74a0c468dd973191110dc636ca82994ea7af327c6c148022100886d852e54dade6c2adab74aeb97b00e477a98f268c58e235324a11ad1ba478d\", :header #b.block.Header{:height 6, :timestamp 1498242480999, :extradata nil, :hash \"0f6368636903ce2ec609b6d28d6d6228fbea08bfe4ffcc0e1c0280038a2d5376\", :prevhash \"8a01af4d0175878ad3615a7d5310071b3d772c22a27fc9d6e75f29b1bf9f0475\", :txhash nil}, :transactions []} #b.block.Block{:forger \"3059301306072a8648ce3d020106082a8648ce3d03010703420004a0141000ec4c9dd583c0fb8f406f98c19c226978b0f1d97124cf9a4550b38d802d72baca3c1dd4e46ca920f81ae5d0c2180b20010db15d68bd9f1a3904840489\", :signature \"3045022100e02f8c1501a64467bf0a0e08908b4bc308a552d7ca7d324267c8fea4559e9bee022011271c1a8da0b36d15fb3d309f95f94a6048c55b900f443f26c8f33df95a09eb\", :header #b.block.Header{:height 5, :timestamp 1498242479995, :extradata nil, :hash \"8a01af4d0175878ad3615a7d5310071b3d772c22a27fc9d6e75f29b1bf9f0475\", :prevhash \"3a31f362e929125ccc142600a63da3c8a4e29b9d0a9fd787fb5ea963ab34048b\", :txhash nil}, :transactions []} #b.block.Block{:forger \"3059301306072a8648ce3d020106082a8648ce3d03010703420004a0141000ec4c9dd583c0fb8f406f98c19c226978b0f1d97124cf9a4550b38d802d72baca3c1dd4e46ca920f81ae5d0c2180b20010db15d68bd9f1a3904840489\", :signature \"3046022100a68f165e9148e2d10ac81db73a57b190e3eddbf8e07f8562b3bd626f9b8776930221009b4bc293f912c7c5a7104fa85e628e89db0177d750262999ff28a0412c2b47f6\", :header #b.block.Header{:height 4, :timestamp 1498242474991, :extradata nil, :hash \"3a31f362e929125ccc142600a63da3c8a4e29b9d0a9fd787fb5ea963ab34048b\", :prevhash \"1c0535eb54312ab93b16cbf8e5ac6b102f94c00057cfe728c80a0fe9adf3dc5f\", :txhash nil}, :transactions []} #b.block.Block{:forger \"3059301306072a8648ce3d020106082a8648ce3d03010703420004a0141000ec4c9dd583c0fb8f406f98c19c226978b0f1d97124cf9a4550b38d802d72baca3c1dd4e46ca920f81ae5d0c2180b20010db15d68bd9f1a3904840489\", :signature \"304502203d1ed5cd854624b19bee812f5b233adfcc0c5c18679c0cfa73936e763046de04022100ff5f4ed5a4b6df7731a12a90f8b6b6fdfc1736c8f628606a3ae748c693cee965\", :header #b.block.Header{:height 3, :timestamp 1498242469987, :extradata nil, :hash \"1c0535eb54312ab93b16cbf8e5ac6b102f94c00057cfe728c80a0fe9adf3dc5f\", :prevhash \"5900f0fb3c4ea5157de9d6c1156ac8fde50d792df83058b5ad9100271189ab52\", :txhash nil}, :transactions []} #b.block.Block{:forger \"3059301306072a8648ce3d020106082a8648ce3d03010703420004a0141000ec4c9dd583c0fb8f406f98c19c226978b0f1d97124cf9a4550b38d802d72baca3c1dd4e46ca920f81ae5d0c2180b20010db15d68bd9f1a3904840489\", :signature \"30450220452950989eb82cbebcd5f9ef32e6ae853a803411e1464d93f18c82e6b0c84dd5022100c6961e82b5035869ebc83f693e8a8454942375798ac463817e0346174d8c2803\", :header #b.block.Header{:height 2, :timestamp 1498242464981, :extradata nil, :hash \"5900f0fb3c4ea5157de9d6c1156ac8fde50d792df83058b5ad9100271189ab52\", :prevhash \"27b419693e91a0f00495a705b561797f8b469ac5810c3e398cb3cdc64fc56e77\", :txhash nil}, :transactions []} #b.block.Block{:forger \"3059301306072a8648ce3d020106082a8648ce3d03010703420004a0141000ec4c9dd583c0fb8f406f98c19c226978b0f1d97124cf9a4550b38d802d72baca3c1dd4e46ca920f81ae5d0c2180b20010db15d68bd9f1a3904840489\", :signature \"304502206a98c8dd1287e3617809f6058c316e3b38ed83afdee08b44bf516472cde4c264022100e7975752ea25bdde0deca1baa6fda173c9887a866f42b6731041268bdab9858b\", :header #b.block.Header{:height 1, :timestamp 1498242463958, :extradata nil, :hash \"27b419693e91a0f00495a705b561797f8b469ac5810c3e398cb3cdc64fc56e77\", :prevhash \"56e17a7530ad96b03e7ac8649d432f4e8cef51db1031e39a3f6be669f1c8e79a\", :txhash nil}, :transactions []} #b.block.Block{:forger \"3059301306072a8648ce3d020106082a8648ce3d03010703420004a0141000ec4c9dd583c0fb8f406f98c19c226978b0f1d97124cf9a4550b38d802d72baca3c1dd4e46ca920f81ae5d0c2180b20010db15d68bd9f1a3904840489\", :signature \"30450221008da5cd654602a71fc0bd37d372065686f5397350aac0d2ace7b39ebb0053b686022050e43a1d1206b6994b00bd7861268f64cd304d2107ba0bef9b2238d5b29436e2\", :header #b.block.Header{:height 0, :timestamp 1498242456317, :extradata \"TODO: political or philosophical statement\", :hash \"56e17a7530ad96b03e7ac8649d432f4e8cef51db1031e39a3f6be669f1c8e79a\", :prevhash \"\", :txhash nil}, :transactions []})"))
+
+; convert into vector in order to have the convenient subvec function available
+; order is reversed because we want the genesis block at index 0
+(def tcv (into [] (reverse tc)))
+
+; a valid chain with 6 blocks (5-0)
+; It's not clear to me why we don't have to reverse again
+(def ch_0_5 (into () (subvec tcv 0 6)))
 
 ; subchain 4-0
-(def ch_0_4 (read-string "()"))
+(def ch_0_4 (into () (subvec tcv 0 5)))
 
 ; subchain 5-3
-(def bl_3_5 (read-string "()"))
+(def bl_3_5 (into () (subvec tcv 3 6)))
 
-; height 5
-(def bl_5a (read-string "()"))
+; alternative (valid) block at height 5
+(def bl_5_alt_valid (read-string "#b.block.Block{:forger \"3059301306072a8648ce3d020106082a8648ce3d03010703420004a0141000ec4c9dd583c0fb8f406f98c19c226978b0f1d97124cf9a4550b38d802d72baca3c1dd4e46ca920f81ae5d0c2180b20010db15d68bd9f1a3904840489\", :signature \"30460221008761f40bea62e7481041cf546850d2816421965d950f6b5a4564a7d30a7abd7e0221008fc8961e7dac57127a20aa4b4db69d0497fde19cccb6f129abb87edcf9ef7614\", :header #b.block.Header{:height 5, :timestamp 1498244742762, :extradata nil, :hash \"69c1d5daf97f167851b61910a7e5f37924d260439616e03f14fa0e4c40b5169d\", :prevhash \"3a31f362e929125ccc142600a63da3c8a4e29b9d0a9fd787fb5ea963ab34048b\", :txhash nil}, :transactions []}"))
 
-(def bl-map (into {} bl_5a))
-(def bl_5a_badhash (read-string "()"))
+; alternative (invalid - different hash) block at height 5
+(def bl_5_alt_invalid_hash (read-string "#b.block.Block{:forger \"3059301306072a8648ce3d020106082a8648ce3d03010703420004a0141000ec4c9dd583c0fb8f406f98c19c226978b0f1d97124cf9a4550b38d802d72baca3c1dd4e46ca920f81ae5d0c2180b20010db15d68bd9f1a3904840489\", :signature \"30460221008761f40bea62e7481041cf546850d2816421965d950f6b5a4564a7d30a7abd7e0221008fc8961e7dac57127a20aa4b4db69d0497fde19cccb6f129abb87edcf9ef7614\", :header #b.block.Header{:height 5, :timestamp 1498244742762, :extradata nil, :hash \"59c1d5daf97f167851b61910a7e5f37924d260439616e03f14fa0e4c40b5169d\", :prevhash \"3a31f362e929125ccc142600a63da3c8a4e29b9d0a9fd787fb5ea963ab34048b\", :txhash nil}, :transactions []}"))
+
+; alternative (invalid - different signature) block at height 5
+(def bl_5_alt_invalid_sig (read-string "#b.block.Block{:forger \"3059301306072a8648ce3d020106082a8648ce3d03010703420004a0141000ec4c9dd583c0fb8f406f98c19c226978b0f1d97124cf9a4550b38d802d72baca3c1dd4e46ca920f81ae5d0c2180b20010db15d68bd9f1a3904840489\", :signature \"20460221008761f40bea62e7481041cf546850d2816421965d950f6b5a4564a7d30a7abd7e0221008fc8961e7dac57127a20aa4b4db69d0497fde19cccb6f129abb87edcf9ef7614\", :header #b.block.Header{:height 5, :timestamp 1498244742762, :extradata nil, :hash \"69c1d5daf97f167851b61910a7e5f37924d260439616e03f14fa0e4c40b5169d\", :prevhash \"3a31f362e929125ccc142600a63da3c8a4e29b9d0a9fd787fb5ea963ab34048b\", :txhash nil}, :transactions []}"))
+
+(def bl_with_txns #b.block.Block{:forger "3059301306072a8648ce3d020106082a8648ce3d03010703420004a0141000ec4c9dd583c0fb8f406f98c19c226978b0f1d97124cf9a4550b38d802d72baca3c1dd4e46ca920f81ae5d0c2180b20010db15d68bd9f1a3904840489", :signature "30450221009bb8195ea459a6aae5c1cdd97ffccc14796013dc632479cc4ee7807d0c835f87022011a4e6ad64b8acd8e4665cddfd59bab5db80ebf0025cf36560bc65040d09403e", :header #b.block.Header{:height 3, :timestamp 1498262464730, :extradata nil, :hash "942fcec7d339550a8ba172b1f24832c3f633a9cbbd7584bf0fbc26a6dca2ec33", :prevhash "a178a656bfb924bef3b8e450fc905e5a0c30ee5a0d2f8c44355b6a9f0cadb901", :txhash "59ab1c44b202773ac667abcfc1696eddcf3136ba67d9f6b476457c6176fd22ec"}, :transactions [#b.transaction.Transaction{:signature "304502204514cfb7118ccf1dddbb9b5904da9b93ef4733445812339f1dae8041518e7635022100dcd2b13e7e808ea5432ca26f4d1d171b0e84be4a61bf53d15994248b2c854fb5", :sender "3059301306072a8648ce3d020106082a8648ce3d03010703420004a0141000ec4c9dd583c0fb8f406f98c19c226978b0f1d97124cf9a4550b38d802d72baca3c1dd4e46ca920f81ae5d0c2180b20010db15d68bd9f1a3904840489", :receiver "3059301306072a8648ce3d020106082a8648ce3d03010703420004068191d614bf03becbea89f8f9bf7ffb1ba4e0ff092ce56a2100822aafee4a3dd20e4ece50f845b00f39c09318419059b3b6cdbc0e07504ab65b6ebf94717aab", :value 2}]})
+
+
+(def bl-map (into {} bl_5_alt_valid))
+;(def bl_5a_badhash (read-string "()"))
 
 (def addr "3059301306072a8648ce3d020106082a8648ce3d03010703420004a0141000ec4c9dd583c0fb8f406f98c19c226978b0f1d97124cf9a4550b38d802d72baca3c1dd4e46ca920f81ae5d0c2180b20010db15d68bd9f1a3904840489")
 (def sig "3045022100cf6e099dd2c3dfcedd6e24cb683545670ad892f4e60fa316c1ea15f651085dfc02200ae29da9451baa04b3a3b902772f03a1b4b1cffdfe015183244c93f6391bcfd7")

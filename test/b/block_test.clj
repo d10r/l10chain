@@ -8,5 +8,5 @@
     (let [b (->Block f/addr f/sig 3 nil f/bhash [])]
       (is (valid? b))))
 
-  (testing "instantiate existing block"
+  (testing "instantiate Block object from map"
     (let [b (map->Block f/bl-map)])))

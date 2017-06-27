@@ -8,7 +8,7 @@
 
 (.setLevel (Logger/getLogger (str *ns*)) Level/DEBUG)
 
-(defrecord Header [^int height ^long timestamp ^String extradata ^String hash ^String prevhash ^String txhash])
+(defrecord Header [^long height ^long timestamp ^String extradata ^String hash ^String prevhash ^String txhash])
 (defrecord Block [^String forger ^String signature ^Header header ^Transaction transactions])
 
 (defn- short-hash [h]

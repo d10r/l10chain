@@ -25,7 +25,8 @@
   ([] (if http-server (stop-server http-server))) ;no arg: stop the (last) server previously started by start-server
   ([handle]
    (println "stopping http server...")
-   (.close handle)))
+   (.close handle)
+   (def http-server nil)))
 
 (defn- on-socket-closed [socket]
   (log/debug "closing socket (" (dec (count @connpeers)) " remaining)")
@@ -70,9 +71,3 @@
   (let [msgstr (generate-string msg)]
     (log/debug "sending msg: " msgstr)
     (stream/put! socket msgstr)))
-
-
-;p2pInit(iface, port, cmdMap) // get a map of commands to functions. Protocols?
-;p2pConnect(host port) return socket
-;p2pSend(socket, cmd, data)
-;p2pReceive(socket, cmd, data) switch command dispatch

@@ -15,10 +15,12 @@
 (.setLevel (Logger/getLogger (str *ns*)) Level/INFO)
 
 (def config {:default-p2p-port 20202
-             :default-data-dir "data"
+             :default-data-dir "node0"
              :blocktime 5
              :block-max-txns 500
-             :genesis false})
+             :genesis false
+             :forge false
+             :server false})
 
 (defn exit [status msg]
   (println msg)
@@ -38,28 +40,41 @@
 ; this creates a PersistentTreeSet
 (def mempool (atom (sorted-set-by tx/higher-prio?)))
 
-(defn- genesis-block[]
-  "Initializes the Blockchain with a genesis Block.
-  TODO: Add option to load a chain from storage"
-  (log/debug "creating genesis block")
-  ; Chain config is added as metadata to the genesis block
-  (let [conf (assoc (select-keys config [:blocktime :block-max-txns]) :validated true)]
-    (with-meta (block/->Block (:own-address config)
-                 "30450221008da5cd654602a71fc0bd37d372065686f5397350aac0d2ace7b39ebb0053b686022050e43a1d1206b6994b00bd7861268f64cd304d2107ba0bef9b2238d5b29436e2" ; (crypto/sign "0")
-                 0
-                 "TODO: political or philosophical statement"
-                 ""
-                 []) conf)))
+(defn- genesis-conf-meta[]
+  "Chain config to added as metadata to the genesis block"
+  (assoc (select-keys config [:blocktime :block-max-txns]) :validated true))
+
+(defn- default-genesis-block []
+  "Returns a genesis block with hardcoded forger address and signature. Timestamp and blockhash are dynamically created."
+  (log/debug "Loading hardcoded genesis block")
+  (with-meta (block/->Block "3059301306072a8648ce3d020106082a8648ce3d03010703420004a0141000ec4c9dd583c0fb8f406f98c19c226978b0f1d97124cf9a4550b38d802d72baca3c1dd4e46ca920f81ae5d0c2180b20010db15d68bd9f1a3904840489"
+                            "30450221008da5cd654602a71fc0bd37d372065686f5397350aac0d2ace7b39ebb0053b686022050e43a1d1206b6994b00bd7861268f64cd304d2107ba0bef9b2238d5b29436e2"
+                            0
+                            "TODO: political or philosophical statement"
+                            ""
+                            []) (genesis-conf-meta)))
+
+(defn- create-genesis-block []
+  "Creates a genesis block for the loaded account."
+  (log/debug "Creating genesis block for " (:own-address config))
+  (with-meta (block/->Block (:own-address config)
+                            (crypto/sign "0" (:privkey mykeys))
+                            0
+                            "TODO: political or philosophical statement"
+                            ""
+                            []) (genesis-conf-meta)))
 
 ; see http://clojure.github.io/tools.cli/index.html#clojure.tools.cli/parse-opts
 (def cli-options
-  [["-p" "--p2p-port PORT" "port for p2p network"
+  [["" "--peers PEERLIST" "comma separated list of host[:port]"]
+   ["-d" "--data-dir DATADIR" "data directory for this instance" :default (:default-data-dir config)]
+   ["-g" "--genesis" "create a new genesis block. NOT YET WORKING FOR ARBITRARY ACCOUNTS (forger and signature hardcoded)!"]
+   ["-f" "--forge" "start the forger process"]
+   ["-s" "--server" "start a server listening for incoming connections"]
+   ["-p" (str "--p2p-port PORT" "port for server socket. Default: " (:default-p2p-port config))
     :default (:default-p2p-port config)
     :parse-fn #(Integer/parseInt %)
     :validate [#(< 0 % 0x10000) "Must be a number between 0 and 65536"]]
-   ["" "--peers PEERLIST" "comma separated list of host[:port]"]
-   ["-d" "--data-dir DATADIR" "data directory for this instance" :default (:default-data-dir config)]
-   ["-g" "--genesis" "create a new genesis block"]
    ["-h" "--help"]])
 
 (defn cli-parse-to-config! [args]
@@ -76,7 +91,9 @@
                            (clojure.string/split (:peers options) #",")
                            [])
                   :data-dir (:data-dir options)
-                  :genesis (:genesis options)))))
+                  :genesis (:genesis options)
+                  :forge (:forge options)
+                  :server (:server options)))))
 
 (defn sign [data]
   {:pre [(not (nil? (:privkey mykeys)))]}
@@ -97,7 +114,7 @@
 
 (defn block-forged [b]
   "Callback for newly forged blocks."
-  (let [newchain (chain/append-or-replace-block @blockchain b)]
+  (let [newchain (chain/append-or-replace-last @blockchain b)]
     (if newchain
       (do
         (log/debug "forged block " (block/short-block-hash b) " can be added to the chain")
@@ -122,13 +139,42 @@
   (cli-parse-to-config! args)
   (def mykeys (crypto/loadkeys (str (:data-dir config) "/keys") ""))
   (def config (assoc config :own-address (:pubkey-hex mykeys)))
-  (log/info "Keys loaded. Node address is " (:own-address config))
+  (log/info "Keys loaded for address " (:own-address config))
   (if (:genesis config)
-    (reset! blockchain (list (genesis-block)))
-    (reset! blockchain (list (with-meta (block/->Block nil nil 0 nil nil []) {:blocktime 4}))))
+    (do
+      (reset! blockchain (list (default-genesis-block)))
+      (log/info "Default genesis block loaded. Block hash: " (b/block-hash (chain/genesis-block @blockchain))))
+    (do
+      (reset! blockchain (list (with-meta (block/->Block nil nil 0 nil nil []) {:blocktime 4})))
+      (log/info "Empty chain initialized (will accept any genesis block it receives from peers)")))
+  (protocol/init blockchain add-to-mempool update-chain)
+  (log/info "protocol initialized")
+  (if (:forge config)
+    (do
+      (forger/start {:address   (:own-address config)
+                     :blocktime (:blocktime config)
+                     :max-txns  (:block-max-txns config)}
+                    blockchain mempool block-forged sign)
+      (log/info "forger started")))
+  (if (:server config)
+    (do
+      (p2p/start-server "::" (:p2p-port config) protocol/onreceive)
+      (log/info "p2p node started on port " (:p2p-port config))))
+  (if (not (empty? (:peers config)))
+    (doall (map #(let [[host opt-port] (clojure.string/split % #":")
+                       port (if (nil? opt-port)
+                              (:default-p2p-port config)
+                              opt-port)]
+                    (log/info "connecting to " host port)
+                    (p2p/connect (str "ws://" host) port protocol/onreceive))
+                    ;(connect-to-peer host port))
+                   (:peers config)))))
 
-  ;(def protocol/chainref blockchain)
-  (protocol/init blockchain add-to-mempool update-chain))
+(defn stop[]
+  "Idempotent shutdown function"
+  (forger/stop)
+  (p2p/disconnect)
+  (p2p/stop-server))
 
   ;(forger/start (:own-address config) chain/blockchain (:blocktime config) chain/append-block)
   ;(log/info "Forger started")
@@ -152,7 +198,7 @@
   (def chain @b)
   (def address (:own-address config))
   (def a address)
-  (def b (:signature (genesis-block)))
+  (def b (:signature (default-genesis-block)))
   (def chain1 chain)
   (def chain2 chain)
   (println "loaded"))
@@ -196,7 +242,7 @@
 
 (defn sy [] (protocol/request :getblocks {} (first @p2p/connpeers)))
 
-(defn g [] (reset! blockchain (list (genesis-block))))
+(defn g [] (reset! blockchain (list (default-genesis-block))))
 
 (defn d [] (p2p/disconnect))
 

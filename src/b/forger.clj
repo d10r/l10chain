@@ -9,17 +9,6 @@
 
 (.setLevel (Logger/getLogger (str *ns*)) Level/DEBUG)
 
-(defn process-blockUNUSED [block appendfn chainref]
-  "Adds the block to this node's chain. If successful, broadcasts it to the network."
-  (let [newchain (appendfn @chainref block)]
-    (if newchain
-      (do
-        (log/debug "block " (b/short-block-hash block) " can be added to the chain")
-        (reset! chainref newchain)
-        ; TODO: optimisation: broadcast only if the chain improved (not the case if my distance above average)
-        (protocol/broadcast :block block))
-      (log/debug "block " (b/short-block-hash block) " is rejected: \n" block))))
-
 (defn cheat-process-block [block _ chainref]
   (reset! chainref (conj @chainref block)))
 
@@ -31,6 +20,7 @@
   (let [txlog (set (chain/txlog ch))]
     (loop [mp mp
            block-txns []]
+      (log/debug "looping with " (count mp) " entries in mempool, " (count block-txns) " entries in tx list")
       ; if we emptied the mempool or reached the limit of allowed txns per block, return the current list
       (if (or (empty? mp)
               (> (count block-txns) max))
@@ -48,38 +38,47 @@
             (recur (disj mp tx) (conj block-txns tx))
             ; bad tx: only remove from input
             (do
+              ; TODO: invalid txns should probably also be removed from mempool
               (log/debug "ignoring invalid tx " tx)
               (recur (disj mp tx) block-txns))))))))
 
 ; the forger relies on the caller to init crypto and self with a matching key / address pair
+(def task nil)
 (defn start [config chainref mempoolref block-callback sig-fn]
   "Starts the forger: will propose a block every blocktime seconds, based on the given chain"
-  (if (not (chain/genesis-block @chainref))
-    (log/warn "can't forge without genesis block!")
-    (def task (future (loop []
-                        ; todo: for every height: block until reached
-                        (if (>= (chain/height @chainref) (chain/max-height @chainref))
-                          ; if the chain has fallen back, forge with 1 Hz, otherwise adjust frequency to blocktime
-                          (Thread/sleep (* (- (:blocktime config) 1) 1000)))
-                        (try
-                          (let [ch @chainref
-                                prevblock (chain/last-block ch)
-                                height (inc (chain/height ch)) ;(inc (:height prevheader))
-                                signature (sig-fn (join "_" [(b/beacon-sig prevblock) height]))
-                                transactions (block-tx-list ch @mempoolref (:max-txns config))
-                                block (b/->Block (:address config) signature height nil (b/block-hash prevblock) transactions)]
-                            ;(process-block block block-callback chainref)
-                            (block-callback block)
-                            ;(callback (chain/->Block address signature header []))
-                            (print ".")
-                            (Thread/sleep 1000))
-                          (catch InterruptedException e
-                            (log/info "forger shutting down")
-                            (throw e))
-                          (catch StackOverflowError e       ;Exception e
-                            (log/warn "Exception" (.toString e))
-                            (throw e))))
-                      (recur)))))
+  (def task (future
+              (do
+                ; if we have no genesis block, wait for it. (TODO: Is there a more elegant way to do this?)
+                (while (not (chain/genesis-block @chainref))
+                  (log/warn "can't forge without genesis block!")
+                  (Thread/sleep 10000))
+
+                (loop []
+                  ; todo: for every height: block until reached
+                  (if (>= (chain/height @chainref) (chain/max-height @chainref))
+                    ; if the chain has fallen back, forge with 1 Hz, otherwise adjust frequency to blocktime
+                    (Thread/sleep (* (- (:blocktime config) 1) 1000)))
+                  (try
+                    (let [ch @chainref
+                          prevblock (chain/last-block ch)
+                          height (inc (chain/height ch))    ;(inc (:height prevheader))
+                          signature (sig-fn (join "_" [(b/beacon-sig prevblock) height]))
+                          transactions (block-tx-list ch @mempoolref (:max-txns config))
+                          block (b/->Block (:address config) signature height nil (b/block-hash prevblock) transactions)]
+                      ;(process-block block block-callback chainref)
+                      (if (not (empty? transactions))
+                        (log/debug "block with transactions"))
+                      (block-callback block)
+                      ;(callback (chain/->Block address signature header []))
+                      (print ".")
+                      (Thread/sleep 1000))
+                    (catch InterruptedException e
+                      (log/info "forger shutting down")
+                      (throw e))
+                    (catch StackOverflowError e             ;Exception e
+                      (log/warn "Exception" (.toString e))
+                      (throw e)))
+                  (recur))))))
 
 (defn stop []
   (if (future? task) (future-cancel task)))
