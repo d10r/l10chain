@@ -6,7 +6,7 @@
   (:require [clojure.tools.logging :as log])
   (:import (org.apache.log4j Logger Level)))
 
-(.setLevel (Logger/getLogger (str *ns*)) Level/INFO)
+(.setLevel (Logger/getLogger (str *ns*)) Level/DEBUG)
 
 ; set by core on init
 (def chref)
@@ -29,7 +29,8 @@
 ;(defmethod sendx :blocks [_ blocks peer]
 ;  (p2p/sendmsg peer {:blocks blocks}))
 
-(defmulti request (fn [cmd args peer] cmd))
+(defmulti request (fn [cmd args peer]
+                    cmd))
 
 ; This acts as a lock which avoids too many requests for getblocks in parallel. Set with timeout.
 (def lock-getblocks (future ()))

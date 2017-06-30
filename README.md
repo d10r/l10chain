@@ -1,7 +1,3 @@
-**Preliminary Note**
-This is work in progress. The Readme may not always reflect the code. Tests and some cleanup missing.
-Instructions for how to run it will follow. 
-
 # l10chain
 
 ## Rationale
