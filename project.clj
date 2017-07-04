@@ -20,6 +20,6 @@
                                                     com.sun.jmdk/jmxtools
                                                     com.sun.jmx/jmxri]]]
 
-  :main ^:skip-aot b.core
+  :main b.core
   :target-path "target/%s"
   :profiles {:uberjar {:aot :all}})
