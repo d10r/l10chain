@@ -51,8 +51,8 @@
 
 (defmethod broadcast :default [cmd data]
   ; map creates a lazy seq, doesn't anything without doall
-  (log/debug "broadcasting " cmd " to " (count @p2p/connpeers) " peers")
-  (doall (map #(p2p/sendmsg % {cmd data}) @p2p/connpeers)))
+  (log/debug "broadcasting " cmd " to " (count @p2p/peers) " peers")
+  (doall (map #(p2p/sendmsg % {cmd data}) @p2p/peers)))
 
 ;(defmethod broadcast :block [_ block]
 ;  (log/debug "broadcasting block " (b/short-block-hash block) " with height " (get-in block [:header :height]) " to " (count @p2p/connpeers) " peers")
@@ -61,10 +61,10 @@
 
 (defmulti relay (fn [cmd data] cmd))
 
-(defmethod relay :default [cmd data]
+(defmethod relay :default [cmd data])
   ; before this is activated, we need to manage a list tracking which message should already be known by which peer
   ;(log/debug "relaying " cmd)
-  )
+
 
 (defmulti onreceive (fn [cmd data peer] cmd))
 

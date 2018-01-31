@@ -8,8 +8,7 @@
             [b.protocol :as protocol])
   (:require [clojure.tools.namespace.repl :refer [refresh refresh-all]]
             [clojure.tools.cli :as cli]
-            [clojure.tools.logging :as log]
-            [b.block :as b])
+            [clojure.tools.logging :as log])
   (:import (org.apache.log4j Logger Level)))
 
 (.setLevel (Logger/getLogger (str *ns*)) Level/INFO)
@@ -125,9 +124,9 @@
 (defn add-to-mempool [tx]
   "Adds a tx to the local mempool. Acts as callback for protocol."
   (let [tx-with-ts (with-meta tx {:ts-added (System/currentTimeMillis)})]
-    (reset! mempool (conj @mempool tx-with-ts))
+    (reset! mempool (conj @mempool tx-with-ts))))
     ; TODO: use the opportunity to purge ancient transactions
-    ))
+
 
 (defn send-tx [receiver value]
   "Creates and sends a transaction. It's broadcastet and added to local mempool."
@@ -143,7 +142,7 @@
   (if (:genesis config)
     (do
       (reset! blockchain (list (default-genesis-block)))
-      (log/info "Default genesis block loaded. Block hash: " (b/block-hash (chain/genesis-block @blockchain))))
+      (log/info "Default genesis block loaded. Block hash: " (block/block-hash (chain/genesis-block @blockchain))))
     (do
       (reset! blockchain (list (with-meta (block/->Block nil nil 0 nil nil []) {:blocktime 4})))
       (log/info "Empty chain initialized (will accept any genesis block it receives from peers)")))
@@ -165,10 +164,10 @@
                        port (if (nil? opt-port)
                               (:default-p2p-port config)
                               opt-port)]
-                    (log/info "connecting to " host port)
-                    (p2p/connect (str "ws://" host) port protocol/onreceive))
-                    ;(connect-to-peer host port))
-                   (:peers config)))))
+                   (log/info "connecting to " host port)
+                   (p2p/connect (str "ws://" host) port protocol/onreceive))
+                ;(connect-to-peer host port))
+                (:peers config)))))
 
 (defn stop[]
   "Idempotent shutdown function"
@@ -176,87 +175,4 @@
   (p2p/disconnect)
   (p2p/stop-server))
 
-  ;(forger/start (:own-address config) chain/blockchain (:blocktime config) chain/append-block)
-  ;(log/info "Forger started")
-  ;(p2p/start-server "::" (:p2p-port config) {})
-
-; =========================
-; Helper functions for the REPL
-; =========================
-
-(defn r []
-  "Convenience function for repl: reload"
-  (p2p/stop-server)
-  (forger/stop)
-  (refresh))
-
-(defn l []
-  "Convenience function for repl: init for testing"
-  (-main)
-  @(future (Thread/sleep 5000))
-  (forger/stop)
-  (def chain @b)
-  (def address (:own-address config))
-  (def a address)
-  (def b (:signature (default-genesis-block)))
-  (def chain1 chain)
-  (def chain2 chain)
-  (println "loaded"))
-
-
-(defn rl []
-  (r)
-  (Thread/sleep 500) ; not sure why, but without it loading sometimes fails in strange ways
-  (l))
-
-(defn s []
-  "start server"
-  (p2p/start-server "::" 20202 protocol/onreceive))
-
-(defn c []
-  "connect client"
-  (let [peer (p2p/connect "ws://localhost" 20202 protocol/onreceive)]
-    (if (nil? (chain/genesis-block @blockchain))
-      (protocol/request :getblocks {:starth 0} peer))))
-
-(defn ms [] (-main) (s))
-
-(defn f []
-  (def forgerref (forger/start {:address   (:own-address config)
-                                :blocktime (:blocktime config)
-                                :max-txns  (:block-max-txns config)}
-                               blockchain mempool block-forged sign)))
-
-(defn sf [] (forger/stop))
-
-(defn m [& args] (-main args))
-;(-main)
-
-(defn k [dir]
-  (def mykeys (crypto/loadkeys (str dir "/keys") ""))
-  (def config (assoc config :own-address (:pubkey-hex mykeys))))
-
-(require '[cheshire.core :refer :all])
-
-(def bl (parse-string (generate-string {:block (first @b)}) true))
-
-(defn sy [] (protocol/request :getblocks {} (first @p2p/connpeers)))
-
-(defn g [] (reset! blockchain (list (default-genesis-block))))
-
-(defn d [] (p2p/disconnect))
-
-(defn sub []
-  (def chain1 (chain/blocks @b 0 4))
-  (def chain2 (chain/blocks @b 3 5)))
-
-(defn mp []
-  (def tx1 (tx/->Transaction (:own-address config) "xyz" 2 sign))
-  (def tx2 (tx/->Transaction (:own-address config) "abcd" 1 sign))
-  (add-to-mempool tx1)
-  (add-to-mempool tx2))
-
-(defn dtx []
-  (def tx1 (tx/->Transaction (:own-address config) "aaa" 1 sign))
-  (def tx2 (tx/->Transaction (:own-address config) "bbb" 1 sign))
-  (def tx3 (tx/->Transaction (:own-address config) "ccc" 1 sign)))
+(load "core_helpers")

@@ -8,8 +8,8 @@
 
 (.setLevel (Logger/getLogger (str *ns*)) Level/INFO)
 
-; connected peers
-(def connpeers (atom #{}))  ; init with empty set
+; peers: list of connected nodes (stores the socket objects)
+(def peers (atom #{}))  ; init with empty set
 (def protocolhandler (atom nil))
 
 (defn onreceivemsg [socket msg handler]
@@ -29,8 +29,8 @@
    (def http-server nil)))
 
 (defn- on-socket-closed [socket]
-  (log/debug "closing socket (" (dec (count @connpeers)) " remaining)")
-  (reset! connpeers (disj @connpeers socket)))
+  (log/debug "closing socket (" (dec (count @peers)) " remaining)")
+  (reset! peers (disj @peers socket)))
 
 ; setting high max since there's currently no pagination for blocks available
 (def wsconfig {:max-frame-payload 0x7fffffff :max-frame-size 0x7fffffff})
@@ -43,28 +43,28 @@
   ;(stop-server) ; TODO: remove this, it's just for more convenient testing
   (def config {:iface iface :port port :handler handler}) ; TODO: remove (should not be needed)
   (reset! protocolhandler handler)
-    (def http-server (http/start-server (fn [req]
-                                          (log/debug "new connection | upgrading to websocket")
-                                          (let [socket @(http/websocket-connection req wsconfig)]
-                                            (def server-sockets (conj socket)) ; TODO: remove
-                                            (reset! connpeers (conj @connpeers socket))
-                                            (stream/consume #(onreceivemsg socket % handler) socket)
-                                            (stream/on-closed socket #(on-socket-closed socket))))
-                                        {:port port})))
+  (def http-server (http/start-server (fn [req]
+                                        (log/debug "new connection | upgrading to websocket")
+                                        (let [socket @(http/websocket-connection req wsconfig)]
+                                          (def server-sockets (conj socket)) ; TODO: remove
+                                          (reset! peers (conj @peers socket))
+                                          (stream/consume #(onreceivemsg socket % handler) socket)
+                                          (stream/on-closed socket #(on-socket-closed socket))))
+                                      {:port port})))
 
 (defn connect [host port handler]
   "Connects to a given websocket server, installs the callback handler and returns the socket"
   (let [socket @(http/websocket-client (str host ":" port) wsconfig)]
     (stream/consume (fn [msg] (onreceivemsg socket msg handler)) socket)
-    (reset! connpeers (conj @connpeers socket))
+    (reset! peers (conj @peers socket))
     (stream/on-closed socket #(on-socket-closed socket))
     socket))
 
 (defn disconnect
-  ([] (dorun (map #(disconnect %) @connpeers)))
+  ([] (dorun (map #(disconnect %) @peers)))
   ([peer]
    (.close peer)
-   (reset! connpeers (disj @connpeers peer))))
+   (reset! peers (disj @peers peer))))
 
 (defn sendmsg [socket msg]
   "Takes a collection, converts it to JSON and sends it via the given socket."

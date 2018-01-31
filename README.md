@@ -17,32 +17,34 @@ Nodes have one address which is an ECDSA public key. The corresponsing private k
 
 ### Consensus
 
+This PoC implements a simple PoA consensus which favours liveliness over consistency, but at the same time has a kind of optional instant finality (for details, read on).  
+For the sake of simplicity, forgers (validators) have equal voting power, but need to have a balance of at least 1 coin. 
+
 The consensus algo is inspired by [dfinity](http://dfinity.network) and [Algorand](https://arxiv.org/pdf/1607.01341.pdf) (I'm not sure which of them was first).
-It takes the idea of a *random beacon* in a simplified way.
-This random beacon is defined such that the forger has no influence on it. The produced beacon signature at this point is determinstic and can't be influenced by the forger varying block data (e.g. adding or leaving out a transaction).
-That's achieved by creating the signature only over the beacon signature of the previous block and the height of the current block.
-The only influence a forging node has to either create and broadcast a candidate block or not.
-ECDSA signatures are by default not deterministic. Unlike with RSA (RSASSA-PKCS1-v1_5), simple padding is not allowed - the padding needs to be random.
-However by using a cryptographic hash of the plaintext for the padding, deterministic signatures are possible anyway, see [RFC 6979](https://tools.ietf.org/html/rfc6979).
-Daniel W. pointed me to his implementation of this RFC in [Mycelium Wallet](https://github.com/mycelium-com/wallet/blob/fb12ac9d9149b12ecc5a50694e6815b9d11adca4/bitlib/src/main/java/com/mrd/bitlib/crypto/InMemoryPrivateKey.java#L227).
+It takes the idea of a *random beacon* in a simplified way.  
+This random beacon is defined such that the forger has no influence on it. The produced beacon signature at this point is determinstic and can't be influenced by the forger varying block data (e.g. adding or leaving out a transaction).  
+That's achieved by creating the signature only over the beacon signature of the previous block and the height of the current block.  
+The only influence a forging node has to either create and broadcast a candidate block or not.  
+ECDSA signatures are by default not deterministic. Unlike with RSA (RSASSA-PKCS1-v1_5), simple padding is not allowed - the padding needs to be random.  
+However by using a cryptographic hash of the plaintext for the padding, deterministic signatures are possible anyway, see [RFC 6979](https://tools.ietf.org/html/rfc6979).  
+Daniel W. pointed me to his implementation of this RFC in [Mycelium Wallet](https://github.com/mycelium-com/wallet/blob/fb12ac9d9149b12ecc5a50694e6815b9d11adca4/bitlib/src/main/java/com/mrd/bitlib/crypto/InMemoryPrivateKey.java#L227).  
 TODO: implement this.
 
-Via a distance function, a priority ordered list of candidate forgers can be derived from the random beacon.
-During the timeslot for the next block (determined by blocktime), every node can calculate this list by calculating the distance for every candidate forger based on the previous signature.
+Via a distance function, a priority ordered list of candidate forgers can be derived from the random beacon.  
+During the timeslot for the next block (determined by blocktime), every node can calculate this list by calculating the distance for every candidate forger based on the previous signature.  
 When receiving a block, nodes check if according to this list it has higher priority than the block currently held for the open timeslot (this may be the self forged block or a block received before).
-If this new block is *better* in the described way, the node replaces the currently hold one.
-A received block is relayed only if it's the best one the node has seen so far for the current timeslot.
-If a block with height not corresponding to the current timeslot is received, it's not relayed (even if better).
+If this new block is *better* in the described way, the node replaces the currently hold one.  
+A received block is relayed only if it's the best one the node has seen so far for the current timeslot.  
+If a block with height not corresponding to the current timeslot is received, it's not relayed (even if better).  
 It's thus important for nodes to have the clock set correctly, otherwise they will easily get out of sync and frequently create short term forks.
 
-This design has the property that the priority ordered list of candidate forgers is always publicly known for a brief period of time (blocktime), but unknown before and unknown for later blocks.
-It doesn't take the approach of limiting attack surface as far as Algorand. In Algorand, the priority of a forging node becomes visible only after a node broadcastet a block, making it impossible to bribe or censor (e.g. via DOS) that node.
-An advantage of this compromise is that nodes are able to exactly know where in the list a received block is. That means e.g. if a block is received from the forger on top of the list, a node knows that it doesn't need to look any further, basically leading to instant finality for that block (assuming that the node is on the correct chain).
-It also allows for some optimizations like timing broadcasting of blocks according to the position in the list.
+This design has the property that the priority ordered list of candidate forgers is always publicly known for a brief period of time (blocktime), but unknown before and unknown for later blocks.  
+It doesn't take the approach of limiting attack surface as far as Algorand. In Algorand, the priority of a forging node becomes visible only after a node broadcasted a block, making it impossible to bribe or censor (e.g. via DoS attack) that node.  
+An advantage of this compromise is that nodes are able to exactly know where in the list a received block is. That means e.g. if a block is received from the forger on top of the list, a node knows that it doesn't need to look any further, basically leading to instant finality for that block (assuming that the node is on the correct chain).  
+It also allows for some optimizations like timing broadcasting of blocks according to the position in the list.  
 Also, it allows for a less complex mechanism. Due to the limited knowledge of nodes, Algorand additionally needs a Byzantine agreement protocol for every block in order to determine which of the broadcastet blocks is going to be included.
 
-The probability of the 
-If the network grows bigger, the probability of this will diminish. This could be countered by designing a check-in mechanism which requires potential forgers to explicitly state there wish to be active forgers. A penalty on those failing to fulfill that promise could incentivize forgers to check out before going offline.
+If the network grows bigger, the probability of this will diminish. This could be countered by designing a check-in mechanism which requires potential forgers to explicitly state their wish to be active forgers. A penalty on those failing to fulfill that promise could incentivize forgers to check out before going offline (afaik, something like that is proposed for Ethereum's *Casper*).
 
 When a node receives a block with mismatching previous hash, it will request more blocks from that node. On receiving them, the node will check if those blocks lead to a better chain. This enables reorgs.
 A chain is better if it weights more.
@@ -110,7 +112,7 @@ Missing essential parts:
 * Node discovery: Add a protocol command for retrieving a list of known nodes/peers.
 * Implement message (txns and blocks) relaying: requires managing a list of peers per message in order to limit redundancy and avoid amplification attacks.
 
-### Next steps
+### Also missing...
 
 Some other desirable parts / features:
 

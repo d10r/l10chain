@@ -25,7 +25,7 @@
   (second ch))
 
 (defn blocktime [ch]
-  "Reads the blocktime from chain config."
+  "Reads the blocktime from chain config (when not hardcoded for easier testing)"
 ;  (let [conf (meta (genesis-block ch))]
 ;    (:blocktime conf)))
   4)
@@ -75,11 +75,6 @@
          (filter #(= (:sender %) addr))
          (map #(let [{v :value} %] v))
          (reduce +))))
-
-; TODO: delme
-(defn beacon-distance [ch]
-  "Returns the distance of the beacon from the optimum for the last block."
-  (crypto/distance (b/forger (last-block ch)) (b/beacon-sig (prev-block ch))))
 
 (defn beacon-quality [ch]
   "Returns a value between 0 and 1 where 0 stands for the worst possible and 1 for the best possible forger address
@@ -212,7 +207,6 @@
             (log/debug "bad transaction detected: " tx)
             false))))))
 
-
 (defn valid? [ch]
   "Checks if the given chain is valid. Uses the valid meta marker to check only previously unchecked blocks."
   (if (nil? (genesis-block ch))
@@ -228,7 +222,8 @@
             txns (b/transactions bl)]
         ; TODO: also check if forger is allowed to forge
         (if (not (and (b/valid? bl pbl (max-height ch))
-                      (transactions-valid? (pop ch) txns)))
+                      (transactions-valid? (pop ch) txns)
+                      (>= (balance ch (b/forger bl)) 1)))
           (do
             (log/debug "Block " (b/short-block-hash bl) " at height " (b/height bl) " is invalid!")
             false)
